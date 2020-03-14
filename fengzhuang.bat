@@ -1,0 +1,1 @@
+pyinstaller -F -w --icon=g.ico main.py --console
