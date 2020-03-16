@@ -100,6 +100,8 @@ class Google_Search:
         key_word = re.sub(r"[^a-zA-Z0-9]", "_", self.key_word_1)
         key_file = self.save_folder + '/' + key_word     # key_file 存放关键词+作者的文件夹
         mkdir_reserve(key_file)                          # 创建关键词文件夹
+        if len(key_word) >= 22:
+            key_word = key_word[:20]
         xlsx_name = key_file + '/' + key_word + '.xlsx'  # 以关键词名字命名 xlsx 表格
         workbook = xlsxwriter.Workbook(xlsx_name)        # 建立 xlsx 表格
 
@@ -121,6 +123,7 @@ class Google_Search:
 
         for item in range(len(author_all)):
             author_all[item] = author_all[item].strip()
+
         write_several(author_all)
 
         for i in range(len(author)):
@@ -134,10 +137,19 @@ class Google_Search:
 
         key_word = re.sub(r"[^a-zA-Z0-9]", "_", one_list)
         key_file = self.save_folder + '/' + key_word  # key_file 存放关键词+作者的文件夹
+        author_file = key_file + "/Author"  # key_file 存放关键词+作者的文件夹
         mkdir_reserve(key_file)
+        mkdir_reserve(author_file)
+
+        if len(key_word) >= 22:
+            key_word = key_word[:20]
         xlsx_name = key_file + "/Author-" + key_word + '.xlsx'  # 以关键词名字命名 xlsx 表格
-        workbook = xlsxwriter.Workbook(xlsx_name)  # 建立 xlsx 表格
-        work_sheet = []
+        workbook_0 = xlsxwriter.Workbook(xlsx_name)  # 建立 xlsx 表格
+        work_sheet_0 = workbook_0.add_worksheet("总表")
+        work_sheet_0.set_column(0, 0, 20)  # 设置宽度
+        work_sheet_0.set_column(1, 1, 200)  # 设置宽度
+        title_data = [self.several_name, "链接"]  # 设置标题文字
+        work_sheet_0.write_row('A1', title_data)  # 写入title_data
 
         sleep_time = int(self.sleep_time)
         opt = webdriver.ChromeOptions()                                           # 选择为chrome浏览器
@@ -146,15 +158,21 @@ class Google_Search:
         driver.maximize_window()                                                  # 最大化窗口
         print("\n已成功创建浏览器对象！")
 
-        cnt = 0
+        cnt = 1
         for author in several_list:
             # 表格初始化
-            work_sheet.append(workbook.add_worksheet(author))  # 创建作者分表
-            work_sheet[cnt].set_column(0, 0, 20)                    # 设置宽度
-            work_sheet[cnt].set_column(1, 1, 200)                   # 设置宽度
+            if len(author) >= 22:
+                author_tem = author[:20]
+            xlsx_name = author_file + "/" + author_tem + '.xlsx'  # 以关键词名字命名 xlsx 表格
+            workbook = xlsxwriter.Workbook(xlsx_name)  # 建立 xlsx 表格
+            work_sheet = workbook.add_worksheet(author_tem)
+
+            work_sheet.set_column(0, 0, 20)                    # 设置宽度
+            work_sheet.set_column(1, 1, 200)                   # 设置宽度
             title_data = [self.several_name, "链接"]                            # 设置标题文字
-            work_sheet[cnt].write_row('A1', title_data)             # 写入title_data
-            work_sheet[cnt].write(1, 0, author)                # 写入title_data
+            work_sheet.write_row('A1', title_data)             # 写入title_data
+            work_sheet.write(1, 0, author)                     # 写入title_data
+            work_sheet_0.write(cnt, 0, author)          # 写入第二列标题信息
 
             search_item = self.several_name + ":\"" + author + "\" " + self.one_name + ":\"" + one_list + "\""
             print("\n检索内容：", search_item)
@@ -165,7 +183,7 @@ class Google_Search:
             else:
                 driver.get(
                     self.scolar_url + "/scholar?&q=" + search_item)  # 打开url对应的网页
-            time.sleep(sleep_time)  # 等待2s加载
+            time.sleep(sleep_time)  # 等待加载
             print("已成功打开链接！")
             url_box = []
             if flag == 1:
@@ -174,16 +192,24 @@ class Google_Search:
                 print(link.get_attribute('href'))
                 url_box.append(link.get_attribute('href'))
             # print(url_box)
-            work_sheet[cnt].write_column('B2', url_box)  # 写入第二列标题信息
-            cnt += 1
-        workbook.close()
+            if len(url_box) == 0:
+                url_box.append("NA")
+
+            work_sheet.write_column('B2', url_box)  # 写入第二列标题信息
+            work_sheet_0.write_column(cnt, 1, url_box)  # 写入第二列标题信息
+            cnt += len(url_box)
+            workbook.close()
+        workbook_0.close()
         driver.close()
 
 
 # 去除嵌套list，并且去除空的元素
 def func(x):   # 去除嵌套list，并且去除空的元素
     empty_str = ['']
-    return [" " if x in empty_str else x for x in ([a for b in x for a in func(b)] if isinstance(x, list) else [x])]
+    a = [" " if x in empty_str else x for x in ([a for b in x for a in func(b)] if isinstance(x, list) else [x])]
+    for item in range(len(a)):
+        a[item] = a[item].strip()
+    return a
 
 
 # 此函数为对获取的 bibtex 的列表进行处理，形成可以写入excel的格式
@@ -228,12 +254,19 @@ def read_several():
     f1 = open("several.txt", "r")
     ccc = func(f1.read().split("\n"))
     ccc = [i for i in ccc if (len(str(i)) != 0)]
+    ccc = list(set(func(ccc)))
+    for item in ccc[::-1]:
+        if item == "others":
+            ccc.remove(item)
     return ccc
 
 
 def read_one():
     f1 = open("one.txt", "r")
     return f1.readline()
+
+def test():
+    print(read_several())
 
 
 if __name__ == '__main__':
@@ -256,6 +289,8 @@ if __name__ == '__main__':
             google_search.author_url(0)
         elif option == '3':
             google_search.author_url(1)
+        elif option == '4':
+            test()
         else:
             print("输入不合规范！")
         option = input("\n# 是否继续？（1继续，0退出） #\n")
