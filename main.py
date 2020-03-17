@@ -163,6 +163,8 @@ class Google_Search:
             # 表格初始化
             if len(author) >= 22:
                 author_tem = author[:20]
+            else:
+                author_tem = author
             xlsx_name = author_file + "/" + author_tem + '.xlsx'  # 以关键词名字命名 xlsx 表格
             workbook = xlsxwriter.Workbook(xlsx_name)  # 建立 xlsx 表格
             work_sheet = workbook.add_worksheet(author_tem)
