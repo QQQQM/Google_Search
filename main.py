@@ -6,6 +6,7 @@
 import os
 import re
 import time
+import winsound
 import xlsxwriter
 from selenium import webdriver
 from configparser import ConfigParser
@@ -27,6 +28,7 @@ class Google_Search:
         self.one_name = config['one_name']
         self.year = config['year']
         self.xpath = config['xpath']
+        self.stop_num = int(config['stop_num'])
         self.author = ['Oliphant, Travis E', 'Lutz, Mark']
         if config['no_window'] == "True":
             self.window = True
@@ -159,6 +161,8 @@ class Google_Search:
         print("\n已成功创建浏览器对象！")
 
         cnt = 1
+        cnt_num = 1
+        ulr_list_box = []
         for author in several_list:
             # 表格初始化
             if len(author) >= 22:
@@ -180,14 +184,29 @@ class Google_Search:
             print("\n检索内容：", search_item)
 
             if flag == 0:
-                driver.get(
-                    self.search_url + "/search?q=" + search_item)  # 打开url对应的网页
+                driver.get(self.search_url + "/search?q=" + search_item)       # 打开url对应的网页
             else:
-                driver.get(
-                    self.scolar_url + "/scholar?&q=" + search_item)  # 打开url对应的网页
+                # driver.get(self.scolar_url + "/scholar?&q=" + search_item)    # 打开url对应的网页
+                if cnt == 1:
+                    driver.get(self.scolar_url +  "/scholar?&q= ")             # 打开url对应的网页
+                else:
+                    driver.execute_script("window.open('" + self.scolar_url + "/scholar?&q= " + "')")
+                    handles = driver.window_handles
+                    driver.switch_to.window(handles[-1])
+                time.sleep(sleep_time)                                          # search_item
+                driver.find_element_by_id('gs_hdr_tsi').clear()                 # 清空输入窗口
+                time.sleep(sleep_time)
+                driver.find_element_by_id('gs_hdr_tsi').send_keys(search_item)  # 输入窗口
+                driver.find_element_by_id('gs_hdr_tsb').click()  # 点击确定
+                # pyautogui.press('enter')
             time.sleep(sleep_time)  # 等待加载
             print("已成功打开链接！")
             url_box = []
+            try:
+                url_box.append(driver.current_url)
+                ulr_list_box.append(driver.current_url)
+            except:
+                pass
             if flag == 1:
                 self.xpath = "//h3/a"
             for link in driver.find_elements_by_xpath(self.xpath):
@@ -201,8 +220,26 @@ class Google_Search:
             work_sheet_0.write_column(cnt, 1, url_box)  # 写入第二列标题信息
             cnt += len(url_box)
             workbook.close()
+            if cnt % self.stop_num == 0:
+                winsound.Beep(600,1000)
+                break_out = input("\n是否继续？（1继续，0退出）\n")
+                if int(break_out) == 0:
+                    break
+            cnt_num += 1
         workbook_0.close()
-        driver.close()
+        # driver.close()
+        f2 = open(key_file + '/' + "url-list.bat", "w+")
+        f2.write("@echo off\n")
+        for item in range(len(ulr_list_box)):
+            f2.write("start chrome.exe ")
+            f2.write(ulr_list_box[item])
+            f2.write("\n")
+            f2.write("TIMEOUT /T ")
+            f2.write(str(sleep_time))
+            f2.write("\n")
+        f2.write("pause\nexit")
+        f2.close()
+        print(ignoreit)
 
 
 # 去除嵌套list，并且去除空的元素
@@ -253,10 +290,11 @@ def write_several(a):
 
 
 def read_several():
-    f1 = open("several.txt", "r")
+    f1 = open("several.txt", "r",encoding='utf-8')
     ccc = func(f1.read().split("\n"))
     ccc = [i for i in ccc if (len(str(i)) != 0)]
-    ccc = list(set(func(ccc)))
+    # ccc = list(set(func(ccc)))
+    ccc = sorted(list(set(ccc)),key = ccc.index)
     for item in ccc[::-1]:
         if item == "others":
             ccc.remove(item)
@@ -264,11 +302,8 @@ def read_several():
 
 
 def read_one():
-    f1 = open("one.txt", "r")
+    f1 = open("one.txt", "r",encoding='utf-8')
     return f1.readline()
-
-def test():
-    print(read_several())
 
 
 if __name__ == '__main__':
@@ -291,8 +326,6 @@ if __name__ == '__main__':
             google_search.author_url(0)
         elif option == '3':
             google_search.author_url(1)
-        elif option == '4':
-            test()
         else:
             print("输入不合规范！")
         option = input("\n# 是否继续？（1继续，0退出） #\n")
