@@ -62,8 +62,14 @@ class Google_Search:
 
         home_handle = driver.current_window_handle  # 获取当下的 handle 作为基础页面home_handle
         for num in range(num_max):
+            handles = driver.window_handles  # handles 获取当下所有窗口标签
+            for handle in handles:  # 切换为新的窗口，以便读取信息之后关闭窗口
+                if handle != home_handle:
+                    driver.switch_to.window(handle)
+                    home_handle = driver.current_window_handle  # home handle 记录当下句柄为家句柄
             if num != 0 and num % 10 == 0:  # google学术每页有10项，自动换页
                 driver.find_element_by_xpath("//*[@id='gs_n']/center/table/tbody/tr/td[12]/a/b").click()
+                # driver.find_element_by_xpath("//*[@id='gs_nm']/button[2]/span/span[1]").click()
                 time.sleep(sleep_time)
                 print("\n" + "已成功切换翻页！")
                 home_handle = driver.current_window_handle  # home handle 记录当下句柄为家句柄
@@ -84,13 +90,18 @@ class Google_Search:
                     driver.switch_to.window(handle)
             passage = driver.find_element_by_xpath("/html/body/pre")  # 获取bibtex的具体内容
             bibtex.append(passage.text)  # 加入 bibtex列表中
-            driver.close()  # 关闭 bibtex 窗口
-
-            driver.switch_to.window(home_handle)
+            driver.back()
+            # driver.close()  # 关闭 bibtex 窗口
+            # driver.switch_to.window(home_handle)
             num += 1
             driver.find_element_by_xpath("//*[@id='gs_cit-x']/span[1]").click()  # 点击 取消 按钮
             time.sleep(sleep_time)  # 等待2s加载
             print("第" + str(num) + "篇bibtex提取完成！\n")
+            if num % self.stop_num == 0:
+                winsound.Beep(600, 1000)
+                break_out = input("\n是否继续？（1继续，0退出）\n")
+                if int(break_out) == 0:
+                    break
         print("\n" + "bibtex 全部提取完成！")
         deal_bib(bibtex, title, author)  # 提取 bibtex 中的作者以及标题，保存为list
         driver.close()
@@ -175,10 +186,10 @@ class Google_Search:
 
             work_sheet.set_column(0, 0, 20)                    # 设置宽度
             work_sheet.set_column(1, 1, 200)                   # 设置宽度
-            title_data = [self.several_name, "链接"]                            # 设置标题文字
+            title_data = [self.several_name, "链接"]           # 设置标题文字
             work_sheet.write_row('A1', title_data)             # 写入title_data
             work_sheet.write(1, 0, author)                     # 写入title_data
-            work_sheet_0.write(cnt, 0, author)          # 写入第二列标题信息
+            work_sheet_0.write(cnt, 0, author)                 # 写入第二列标题信息
 
             search_item = self.several_name + ":\"" + author + "\" " + self.one_name + ":\"" + one_list + "\""
             print("\n检索内容：", search_item)
@@ -220,7 +231,7 @@ class Google_Search:
             work_sheet_0.write_column(cnt, 1, url_box)  # 写入第二列标题信息
             cnt += len(url_box)
             workbook.close()
-            if cnt % self.stop_num == 0:
+            if cnt_num % self.stop_num == 0:
                 winsound.Beep(600,1000)
                 break_out = input("\n是否继续？（1继续，0退出）\n")
                 if int(break_out) == 0:
